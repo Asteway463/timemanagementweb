@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type WheelEvent,
+} from "react";
 import { AppScreen, PhoneFrame } from "@/components/AppScreen";
 import { ThemeScreenshot } from "@/components/ThemeScreenshot";
 import { Icon } from "@/components/icons";
@@ -134,6 +141,21 @@ export function Screenshots() {
     });
   }
 
+  function handleRailWheel(event: WheelEvent<HTMLDivElement>) {
+    const rail = railRef.current;
+    if (!rail || rail.scrollWidth <= rail.clientWidth) return;
+
+    // Trackpads can scroll horizontally directly; a mouse wheel usually only
+    // emits deltaY, so translate that gesture into movement along the rail.
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      ? event.deltaX
+      : event.deltaY;
+    if (delta === 0) return;
+
+    event.preventDefault();
+    rail.scrollBy({ left: delta, behavior: "auto" });
+  }
+
   const current = openIndex === null ? null : screenshots[openIndex];
 
   return (
@@ -186,6 +208,7 @@ export function Screenshots() {
           <div
             ref={railRef}
             className="screenshot-rail"
+            onWheel={handleRailWheel}
             role="group"
             aria-label="Atna's Flow app screenshots"
           >
