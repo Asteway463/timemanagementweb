@@ -939,9 +939,14 @@ html[data-theme="light"] .theme-screenshot-dark {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
-  touch-action: auto;
   scrollbar-width: none;
   padding: 0.75rem 0.25rem 1.75rem;
+}
+
+@media (any-pointer: coarse) {
+  .screenshot-rail {
+    touch-action: none;
+  }
 }
 
 .screenshot-rail::-webkit-scrollbar {

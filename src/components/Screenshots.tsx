@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type WheelEvent,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { AppScreen, PhoneFrame } from "@/components/AppScreen";
 import { ThemeScreenshot } from "@/components/ThemeScreenshot";
@@ -65,6 +65,74 @@ export function Screenshots() {
       observer.disconnect();
     };
   }, [updateEdges]);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let axis: "horizontal" | "vertical" | null = null;
+
+    function onTouchStart(event: TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch) return;
+      startX = lastX = touch.clientX;
+      startY = lastY = touch.clientY;
+      axis = null;
+    }
+
+    function onTouchMove(event: TouchEvent) {
+      const currentRail = railRef.current;
+      if (!currentRail) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      const deltaX = lastX - touch.clientX;
+      const deltaY = lastY - touch.clientY;
+      const totalX = Math.abs(touch.clientX - startX);
+      const totalY = Math.abs(touch.clientY - startY);
+
+      if (!axis && Math.max(totalX, totalY) > 8) {
+        axis = totalX > totalY ? "horizontal" : "vertical";
+      }
+
+      lastX = touch.clientX;
+      lastY = touch.clientY;
+      if (!axis) return;
+
+      event.preventDefault();
+      const delta = axis === "vertical" ? deltaY : deltaX;
+      const previousScrollLeft = currentRail.scrollLeft;
+      const maxScroll = currentRail.scrollWidth - currentRail.clientWidth;
+      currentRail.scrollLeft = Math.max(
+        0,
+        Math.min(maxScroll, previousScrollLeft + delta),
+      );
+
+      if (axis === "vertical") {
+        const unconsumedDelta = delta - (currentRail.scrollLeft - previousScrollLeft);
+        if (unconsumedDelta !== 0) window.scrollBy(0, unconsumedDelta);
+      }
+    }
+
+    function onTouchEnd() {
+      axis = null;
+    }
+
+    rail.addEventListener("touchstart", onTouchStart, { passive: true });
+    rail.addEventListener("touchmove", onTouchMove, { passive: false });
+    rail.addEventListener("touchend", onTouchEnd, { passive: true });
+    rail.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      rail.removeEventListener("touchstart", onTouchStart);
+      rail.removeEventListener("touchmove", onTouchMove);
+      rail.removeEventListener("touchend", onTouchEnd);
+      rail.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -141,7 +209,7 @@ export function Screenshots() {
     });
   }
 
-  function handleRailWheel(event: WheelEvent<HTMLDivElement>) {
+  function handleRailWheel(event: ReactWheelEvent<HTMLDivElement>) {
     const rail = railRef.current;
     if (!rail || rail.scrollWidth <= rail.clientWidth) return;
 
@@ -152,14 +220,20 @@ export function Screenshots() {
       : event.deltaY;
     if (delta === 0) return;
 
+    const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? rail.clientWidth
+        : 1;
+    const distance = delta * scale * 0.8;
     const maxScroll = rail.scrollWidth - rail.clientWidth;
-    const canScroll = delta > 0
+    const canScroll = distance > 0
       ? rail.scrollLeft < maxScroll - 1
       : rail.scrollLeft > 1;
     if (!canScroll) return;
 
     event.preventDefault();
-    rail.scrollBy({ left: delta, behavior: "smooth" });
+    rail.scrollLeft += distance;
   }
 
   const current = openIndex === null ? null : screenshots[openIndex];
@@ -182,7 +256,7 @@ export function Screenshots() {
         <Reveal delay={80}>
           <div className="mt-9 flex items-center justify-between gap-4">
             <p className="text-[0.78rem] text-muted">
-              Swipe to explore
+              Scroll vertically or swipe sideways to explore
               <span className="hidden sm:inline"> · tap a screen to enlarge</span>
             </p>
             <div className="flex items-center gap-2">
