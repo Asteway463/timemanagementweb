@@ -152,6 +152,12 @@ export function Screenshots() {
       : event.deltaY;
     if (delta === 0) return;
 
+    const maxScroll = rail.scrollWidth - rail.clientWidth;
+    const canScroll = delta > 0
+      ? rail.scrollLeft < maxScroll - 1
+      : rail.scrollLeft > 1;
+    if (!canScroll) return;
+
     event.preventDefault();
     rail.scrollBy({ left: delta, behavior: "auto" });
   }
