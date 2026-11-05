@@ -159,7 +159,7 @@ export function Screenshots() {
     if (!canScroll) return;
 
     event.preventDefault();
-    rail.scrollBy({ left: delta, behavior: "auto" });
+    rail.scrollBy({ left: delta, behavior: "smooth" });
   }
 
   const current = openIndex === null ? null : screenshots[openIndex];
